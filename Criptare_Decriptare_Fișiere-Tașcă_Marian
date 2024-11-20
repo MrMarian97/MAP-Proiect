@@ -1,0 +1,115 @@
+from cryptography.fernet import Fernet
+import os
+import tkinter as tk
+from tkinter import filedialog, messagebox
+from tkinterdnd2 import TkinterDnD, DND_FILES  # Import pentru Drag-and-Drop
+
+# Generare cheie și salvare în fișier
+def generate_key():
+    key = Fernet.generate_key()
+    with open("key.key", "wb") as key_file:
+        key_file.write(key)
+    messagebox.showinfo("Succes", "Cheia a fost generată și salvată în 'key.key'.")
+
+# Încărcare cheie existentă
+def load_key():
+    try:
+        with open("key.key", "rb") as key_file:
+            return key_file.read()
+    except FileNotFoundError:
+        messagebox.showerror("Eroare", "Fișierul cu cheia nu există! Generează o cheie mai întâi.")
+        return None
+
+# Criptare fișier
+def encrypt_file(file_path):
+    key = load_key()
+    if key is None:
+        return
+    fernet = Fernet(key)
+
+    try:
+        with open(file_path, "rb") as file:
+            file_data = file.read()
+        encrypted_data = fernet.encrypt(file_data)
+        encrypted_file_path = file_path + ".enc"
+
+        with open(encrypted_file_path, "wb") as encrypted_file:
+            encrypted_file.write(encrypted_data)
+        messagebox.showinfo("Succes", f"Fișierul a fost criptat și salvat ca '{encrypted_file_path}'.")
+    except FileNotFoundError:
+        messagebox.showerror("Eroare", "Fișierul specificat nu există!")
+
+# Decriptare fișier
+def decrypt_file(file_path):
+    key = load_key()
+    if key is None:
+        return
+    fernet = Fernet(key)
+
+    try:
+        with open(file_path, "rb") as encrypted_file:
+            encrypted_data = encrypted_file.read()
+        decrypted_data = fernet.decrypt(encrypted_data)
+
+        original_file_path = file_path.replace(".enc", "_decrypted")
+        with open(original_file_path, "wb") as decrypted_file:
+            decrypted_file.write(decrypted_data)
+        messagebox.showinfo("Succes", f"Fișierul a fost decriptat și salvat ca '{original_file_path}'.")
+    except FileNotFoundError:
+        messagebox.showerror("Eroare", "Fișierul criptat specificat nu există!")
+    except Exception as e:
+        messagebox.showerror("Eroare", "Decriptarea a eșuat! Verifică cheia sau fișierul.")
+        print(e)
+
+# Gestionare Drag-and-Drop
+def handle_drag_and_drop(event):
+    file_path = event.data.strip()
+    file_path = file_path.replace("{", "").replace("}", "")  # Înlăturare acolade pentru Windows
+    if not os.path.isfile(file_path):
+        messagebox.showerror("Eroare", "Fișier invalid sau inexistent!")
+        return
+
+    # Personalizare opțiuni Criptare / Decriptare
+    dialog = tk.Toplevel()
+    dialog.title("Alege Acțiunea")
+    dialog.geometry("300x200")
+    tk.Label(dialog, text=f"Fișier selectat:\n{os.path.basename(file_path)}", font=("Arial", 10), wraplength=250).pack(pady=10)
+
+    # Butoane pentru Criptare și Decriptare
+    tk.Button(dialog, text="Criptare", width=15, bg="lightgreen", 
+              command=lambda: [encrypt_file(file_path), dialog.destroy()]).pack(pady=5)
+    tk.Button(dialog, text="Decriptare", width=15, bg="orange", 
+              command=lambda: [decrypt_file(file_path), dialog.destroy()]).pack(pady=5)
+    tk.Button(dialog, text="Anulare", width=15, bg="red", command=dialog.destroy).pack(pady=5)
+
+    # Întrerupe execuția până la închiderea dialogului
+    dialog.transient(root)
+    dialog.grab_set()
+    root.wait_window(dialog)
+
+# Interfața principală
+def main():
+    global root
+    root = TkinterDnD.Tk()  # Folosim TkinterDnD în loc de tk.Tk
+    root.title("Aplicație de Criptare și Decriptare a Fișierelor")
+    root.geometry("500x300")
+
+    # Elemente UI
+    tk.Label(root, text="Trage fișierele în această fereastră sau folosește butoanele:", font=("Arial", 12)).pack(pady=10)
+
+    tk.Button(root, text="Generează Cheie", command=generate_key, width=30, bg="lightblue").pack(pady=5)
+    tk.Button(root, text="Ieșire", command=root.quit, width=30, bg="red").pack(pady=10)
+
+    # Zonă pentru Drag-and-Drop
+    drop_area = tk.Label(root, text="📂 Trage fișiere aici", font=("Arial", 14), fg="blue", bg="lightgray", relief="groove", width=40, height=5)
+    drop_area.pack(pady=20)
+
+    # Asociere Drag-and-Drop cu funcția de gestionare
+    drop_area.drop_target_register(DND_FILES)
+    drop_area.dnd_bind('<<Drop>>', handle_drag_and_drop)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
+
