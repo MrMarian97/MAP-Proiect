@@ -108,8 +108,8 @@ def main():
     drop_area.drop_target_register(DND_FILES)
     drop_area.dnd_bind('<<Drop>>', handle_drag_and_drop)
 
-    root.mainloop()
+    root.mainloop() #Bucla principală a aplicației ce așteaptă interacțiunile utilizatorului
 
-if __name__ == "__main__":
+if __name__ == "__main__": #Așa ne asigurăm ca main() va fi apelată atunci când scriptul este executat direct și nu importat ca modul.
     main()
 
